@@ -12,6 +12,11 @@ func Handler(msg interface{}) {
     fmt.Printf("Message received: %s\n", msgString)
 }
 
+
+func TestHandler(msg interface{}) {
+    fmt.Printf("Handle %d\n", msg.(int))
+}
+
 func main() {
     const countOfTopics = 2
 
@@ -25,7 +30,8 @@ func main() {
             }
         }()
     }
-    
+
+    fmt.Println("Messages are sent")
     wg := sync.WaitGroup{}
     for i := 0; i < countOfTopics; i++ {
         wg.Add(1)
@@ -43,4 +49,13 @@ func main() {
     }
     
     wg.Wait()
+    
+   sp.Subscribe("test", TestHandler)
+    for i := 0; i < 100; i++ {
+        sp.Publish("test", i)
+    }
+
+
+    time.Sleep(time.Second)
+
 }

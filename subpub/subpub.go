@@ -2,6 +2,7 @@ package subpub
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 
@@ -42,17 +43,30 @@ type subscr struct {
 }
 
 func messageProcessing(sub *subscr, cb MessageHandler) {
-    ch := sub.ch
-    ctx := sub.ctx
+   
+    done := make(chan struct{}, 1)
+    done <- struct{}{}
 
-    for {
-        select {
-        case <-ctx.Done():
-            return
-        default:
-            case msg := <-ch:
-               go cb(msg)
-        }
+    for msg := range sub.ch {
+        msgCopy := msg
+        started := make(chan struct{})
+
+        go func(msgCopy interface{}) {
+            select {
+                case <-sub.ctx.Done():
+                    return
+                default:
+                    select {
+                        case <-done:
+                            close(started)
+                            cb(msgCopy)
+
+                            done <- struct{}{}
+                    }
+            }
+        }(msgCopy)
+
+        <-started
     }
 }
 
@@ -102,6 +116,7 @@ func (s *subpub) Subscribe(subject string, cb MessageHandler) (Subscription, err
 
     go messageProcessing(sub, cb)
 
+    fmt.Println("start processing")
     return sub, nil
 }
 
@@ -110,9 +125,7 @@ func (s *subpub) Publish(subject string, msg interface{}) error {
 
     for _, sub := range s.subs {
         if (sub.subject == subject) {
-            go func() {
-                sub.ch <- msg
-            }()
+            sub.ch <- msg
         }
     }
 
