@@ -1,8 +1,9 @@
 package main
 
 import (
+	"fmt"
+	"sync"
 	"time"
-    "fmt"
 	"vk-test/subpub"
 )
 
@@ -12,17 +13,34 @@ func Handler(msg interface{}) {
 }
 
 func main() {
+    const countOfTopics = 2
+
     sp := subpub.NewSubPub()
-    go func() {
-        for {
-            sp.Publish("test", "hello!")
-            time.Sleep(time.Millisecond * 100)
-        }
-    }()
-
-    sub, _ := sp.Subscribe("test", Handler)
+    for i := 0; i < countOfTopics; i++ {
+        go func() {
+            topicName := fmt.Sprintf("test%d", i)
+            for {
+                sp.Publish(topicName, topicName)
+                time.Sleep(time.Millisecond * 100)
+            }
+        }()
+    }
     
-    time.Sleep(time.Second * 10)
+    wg := sync.WaitGroup{}
+    for i := 0; i < countOfTopics; i++ {
+        wg.Add(1)
+        go func() {
+            defer wg.Done()
 
-    sub.Unsubscribe()
+            topicName := fmt.Sprintf("test%d", i)
+            sub, _ := sp.Subscribe(topicName, Handler)
+    
+            dur := (time.Duration)(2 * (i + 1))
+            time.Sleep(time.Second * dur) 
+            
+            sub.Unsubscribe()
+        }()
+    }
+    
+    wg.Wait()
 }

@@ -2,7 +2,10 @@ package subpub
 
 import (
 	"context"
-    "github.com/google/uuid"
+	"strings"
+	"sync"
+
+	"github.com/google/uuid"
 )
 
 type MessageHandler func (msg interface{})
@@ -21,33 +24,57 @@ type subpub struct {
     ctx        context.Context
     cancelFunc context.CancelFunc
 
-    subs       []subscr
+    mu         *sync.RWMutex
+    subs       []subscr 
 }
 
 type subscr struct {
     uuid       uuid.UUID
-
     subject    string
     ch         chan interface{}
 
-    subs       []subscr
+    parent     *subpub
+    
+    mu         *sync.RWMutex
 
+    ctx        context.Context
     cancelFunc context.CancelFunc
+}
+
+func messageProcessing(sub *subscr, cb MessageHandler) {
+    ch := sub.ch
+    ctx := sub.ctx
+
+    for {
+        select {
+        case <-ctx.Done():
+            return
+        default:
+            case msg := <-ch:
+               go cb(msg)
+        }
+    }
 }
 
 func (s *subscr) Unsubscribe() {
     s.cancelFunc()
     
-    for i, sub := range s.subs {
-        if (sub.uuid.String() == s.uuid.String()) {
-            s.subs[i] = s.subs[len(s.subs) - 1]
-            s.subs = s.subs[:len(s.subs) - 1]
+    s.mu.Lock()
+
+    for i, sub := range s.parent.subs {
+        if (strings.Compare(sub.uuid.String(), s.uuid.String()) == 0) {
+            s.parent.subs[i] = s.parent.subs[len(s.parent.subs) - 1]
+            s.parent.subs = s.parent.subs[:(len(s.parent.subs) - 1)]
+            
+            s.mu.Unlock()
+            
             return
         }
     }
+
 }
 
-func (s *subpub) Subscribe(subject string, cb MessageHandler) (Subscription, error){
+func (s *subpub) Subscribe(subject string, cb MessageHandler) (Subscription, error) {
     uuid, err := uuid.NewUUID()
 
     if err != nil {
@@ -59,51 +86,57 @@ func (s *subpub) Subscribe(subject string, cb MessageHandler) (Subscription, err
     sub := &subscr {
         uuid:        uuid,
         subject:     subject,
-        ch:          make(chan interface{}),
-        subs:        s.subs,
+        ch:          make(chan interface{}, 5),
+        mu:          s.mu,
+        parent:      s,
+        ctx:         ctx,
         cancelFunc:  cancel,
-
     }
     
-    go func(ch chan interface{}, mh MessageHandler) {
-       for {
-            select {
-            case <-ctx.Done():
-                return
-            default:
-                select {
-                case msg := <-ch:
-                    mh(msg)
-                }
-            }
-       }
-    }(sub.ch, cb)
-    
+    s.mu.Lock()
+
     s.subs = append(s.subs, *sub)
+
+    s.mu.Unlock()
+
+
+    go messageProcessing(sub, cb)
 
     return sub, nil
 }
 
-func (s subpub) Publish(subject string, msg interface{}) error {
+func (s *subpub) Publish(subject string, msg interface{}) error {
+    s.mu.RLock()
+
     for _, sub := range s.subs {
         if (sub.subject == subject) {
             go func() {
-                sub.ch <- msg       
+                sub.ch <- msg
             }()
         }
     }
+
+    s.mu.RUnlock()
     return nil
 }
 
-func (s subpub) Close (ctx context.Context) error {
-    return nil
+func (s *subpub) Close (ctx context.Context) error {
+    for {
+        select {
+            case <-ctx.Done():
+                s.cancelFunc()
+                return nil
+        }
+    }
 }
 
 func NewSubPub() SubPub {
     ctx, cancel := context.WithCancel(context.Background())
+
     return &subpub {
-        ctx: ctx,
-        cancelFunc: cancel,
-        subs: make([]subscr, 0),
+        ctx:         ctx,
+        cancelFunc:  cancel,
+        mu:          &sync.RWMutex{},
+        subs:        make([]subscr, 0),
     }
 }
