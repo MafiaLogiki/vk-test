@@ -2,7 +2,6 @@ package subpub
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"sync"
 
@@ -45,24 +44,35 @@ type subscr struct {
 func messageProcessing(sub *subscr, cb MessageHandler) {
    
     done := make(chan struct{}, 1)
+    started := make(chan struct{}, 1)
     done <- struct{}{}
+    
+    go func() {
+        <-sub.ctx.Done()
+        close(sub.ch)
+        close(started)
+    }()
 
     for msg := range sub.ch {
+
         msgCopy := msg
-        started := make(chan struct{})
 
         go func(msgCopy interface{}) {
-            select {
-                case <-sub.ctx.Done():
-                    return
-                default:
-                    select {
-                        case <-done:
-                            close(started)
-                            cb(msgCopy)
+            for {
+                select {
+                    case <-sub.ctx.Done():
+                        return
+                    default:
+                        select {
+                            case <-done:
+                                started <- struct{}{}
+                                cb(msgCopy)
 
-                            done <- struct{}{}
-                    }
+                                done <- struct{}{}
+
+                                return
+                        }
+                }
             }
         }(msgCopy)
 
@@ -71,9 +81,9 @@ func messageProcessing(sub *subscr, cb MessageHandler) {
 }
 
 func (s *subscr) Unsubscribe() {
-    s.cancelFunc()
-    
     s.mu.Lock()
+    
+    s.cancelFunc()
 
     for i, sub := range s.parent.subs {
         if (strings.Compare(sub.uuid.String(), s.uuid.String()) == 0) {
@@ -116,7 +126,6 @@ func (s *subpub) Subscribe(subject string, cb MessageHandler) (Subscription, err
 
     go messageProcessing(sub, cb)
 
-    fmt.Println("start processing")
     return sub, nil
 }
 
@@ -134,13 +143,13 @@ func (s *subpub) Publish(subject string, msg interface{}) error {
 }
 
 func (s *subpub) Close (ctx context.Context) error {
-    for {
-        select {
-            case <-ctx.Done():
-                s.cancelFunc()
-                return nil
-        }
+    for _ = range ctx.Done() {
+        s.cancelFunc()
+        return nil
     }
+
+    s.cancelFunc()
+    return nil
 }
 
 func NewSubPub() SubPub {

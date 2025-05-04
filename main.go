@@ -1,10 +1,16 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
 	"vk-test/subpub"
+    
+    "net/http"
+    _ "net/http/pprof"
+
+    "runtime"
 )
 
 func Handler(msg interface{}) {
@@ -20,18 +26,23 @@ func TestHandler(msg interface{}) {
 func main() {
     const countOfTopics = 2
 
+    fmt.Println(runtime.NumGoroutine())
+
     sp := subpub.NewSubPub()
+    
+    go func() {
+        http.ListenAndServe("localhost:6060", nil)
+    }()
+  
     for i := 0; i < countOfTopics; i++ {
         go func() {
             topicName := fmt.Sprintf("test%d", i)
-            for {
+            for i := 0; i < 100000; i++ {
                 sp.Publish(topicName, topicName)
-                time.Sleep(time.Millisecond * 100)
             }
         }()
     }
 
-    fmt.Println("Messages are sent")
     wg := sync.WaitGroup{}
     for i := 0; i < countOfTopics; i++ {
         wg.Add(1)
@@ -41,7 +52,7 @@ func main() {
             topicName := fmt.Sprintf("test%d", i)
             sub, _ := sp.Subscribe(topicName, Handler)
     
-            dur := (time.Duration)(2 * (i + 1))
+            dur := (time.Duration)(i + 2)
             time.Sleep(time.Second * dur) 
             
             sub.Unsubscribe()
@@ -50,12 +61,24 @@ func main() {
     
     wg.Wait()
     
-   sp.Subscribe("test", TestHandler)
-    for i := 0; i < 100; i++ {
+    fmt.Println(runtime.NumGoroutine())
+    
+    sp.Subscribe("test", TestHandler)
+    for i := 0; i < 3; i++ {
         sp.Publish("test", i)
     }
 
 
+    ctx, cancel := context.WithCancel(context.Background())
+
+    fmt.Println(runtime.NumGoroutine())
+
+    cancel()
+    sp.Close(ctx)
+
     time.Sleep(time.Second)
 
+    fmt.Println(runtime.NumGoroutine())
+
+    for {}
 }
