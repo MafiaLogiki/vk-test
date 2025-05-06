@@ -43,9 +43,9 @@ type subscr struct {
 
 func messageProcessing(sub *subscr, cb MessageHandler) {
    
-    done := make(chan struct{}, 1)
+    prevDone := make(chan struct{}, 1)
     started := make(chan struct{}, 1)
-    done <- struct{}{}
+    prevDone <- struct{}{}
     
     go func() {
         <-sub.ctx.Done()
@@ -54,29 +54,32 @@ func messageProcessing(sub *subscr, cb MessageHandler) {
     }()
 
     for msg := range sub.ch {
-
+        
+        curDone := make(chan struct{}, 1)
         msgCopy := msg
 
-        go func(msgCopy interface{}) {
+        go func(prevDone chan struct{}, done chan struct{}, msgCopy interface{}) {
             for {
                 select {
                     case <-sub.ctx.Done():
                         return
                     default:
                         select {
-                            case <-done:
+                            case <-prevDone:
                                 started <- struct{}{}
                                 cb(msgCopy)
-
+                                
                                 done <- struct{}{}
-
+                                close(prevDone)
                                 return
                         }
                 }
             }
-        }(msgCopy)
+        }(prevDone, curDone, msgCopy)
 
         <-started
+
+        prevDone = curDone
     }
 }
 

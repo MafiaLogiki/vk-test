@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 	"vk-test/subpub"
-    
+
     "net/http"
     _ "net/http/pprof"
 
@@ -14,8 +14,8 @@ import (
 )
 
 func Handler(msg interface{}) {
-    msgString := msg.(string)
-    fmt.Printf("Message received: %s\n", msgString)
+    msgString := msg.(int)
+    fmt.Printf("Message received: %d\n", msgString)
 }
 
 
@@ -24,7 +24,7 @@ func TestHandler(msg interface{}) {
 }
 
 func main() {
-    const countOfTopics = 2
+    const countOfTopics = 1
 
     fmt.Println(runtime.NumGoroutine())
 
@@ -38,7 +38,7 @@ func main() {
         go func() {
             topicName := fmt.Sprintf("test%d", i)
             for i := 0; i < 100000; i++ {
-                sp.Publish(topicName, topicName)
+                sp.Publish(topicName, i)
             }
         }()
     }
@@ -52,7 +52,7 @@ func main() {
             topicName := fmt.Sprintf("test%d", i)
             sub, _ := sp.Subscribe(topicName, Handler)
     
-            dur := (time.Duration)(i + 2)
+            dur := (time.Duration)(i + 3)
             time.Sleep(time.Second * dur) 
             
             sub.Unsubscribe()
@@ -61,14 +61,9 @@ func main() {
     
     wg.Wait()
     
+    time.Sleep(time.Second)
     fmt.Println(runtime.NumGoroutine())
     
-    sp.Subscribe("test", TestHandler)
-    for i := 0; i < 3; i++ {
-        sp.Publish("test", i)
-    }
-
-
     ctx, cancel := context.WithCancel(context.Background())
 
     fmt.Println(runtime.NumGoroutine())
