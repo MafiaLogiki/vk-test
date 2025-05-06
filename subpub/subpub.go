@@ -2,6 +2,7 @@ package subpub
 
 import (
 	"context"
+	_ "fmt"
 	"strings"
 	"sync"
 
@@ -44,18 +45,18 @@ type subscr struct {
 func messageProcessing(sub *subscr, cb MessageHandler) {
    
     prevDone := make(chan struct{}, 1)
-    started := make(chan struct{}, 1)
     prevDone <- struct{}{}
     
     go func() {
         <-sub.ctx.Done()
         close(sub.ch)
-        close(started)
     }()
 
     for msg := range sub.ch {
         
         curDone := make(chan struct{}, 1)
+        started := make(chan struct{})
+
         msgCopy := msg
 
         go func(prevDone chan struct{}, done chan struct{}, msgCopy interface{}) {
@@ -66,11 +67,12 @@ func messageProcessing(sub *subscr, cb MessageHandler) {
                     default:
                         select {
                             case <-prevDone:
-                                started <- struct{}{}
+                                close(started)
                                 cb(msgCopy)
                                 
                                 done <- struct{}{}
                                 close(prevDone)
+
                                 return
                         }
                 }
@@ -87,7 +89,7 @@ func (s *subscr) Unsubscribe() {
     s.mu.Lock()
     
     s.cancelFunc()
-
+    
     for i, sub := range s.parent.subs {
         if (strings.Compare(sub.uuid.String(), s.uuid.String()) == 0) {
             s.parent.subs[i] = s.parent.subs[len(s.parent.subs) - 1]
@@ -98,7 +100,8 @@ func (s *subscr) Unsubscribe() {
             return
         }
     }
-
+    
+    s.mu.Unlock()
 }
 
 func (s *subpub) Subscribe(subject string, cb MessageHandler) (Subscription, error) {
@@ -126,7 +129,6 @@ func (s *subpub) Subscribe(subject string, cb MessageHandler) (Subscription, err
 
     s.mu.Unlock()
 
-
     go messageProcessing(sub, cb)
 
     return sub, nil
@@ -147,7 +149,6 @@ func (s *subpub) Publish(subject string, msg interface{}) error {
 
 func (s *subpub) Close (ctx context.Context) error {
     for _ = range ctx.Done() {
-        s.cancelFunc()
         return nil
     }
 
