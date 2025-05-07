@@ -22,7 +22,11 @@ func GetConfig(l logger.Logger) *Config{
         
         l.Info("Read application configuration")
 
-        godotenv.Load(".env")
+        err := godotenv.Load(".env")
+
+        if err != nil {
+            l.Fatal(err)
+        }
 
         instance = &Config{}
 

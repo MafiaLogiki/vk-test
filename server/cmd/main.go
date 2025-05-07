@@ -18,10 +18,8 @@ func main() {
     l := logger.NewLogger()
     cfg := config.GetConfig(l)
 
-    l.Info(cfg.Port)
-
-    lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Port))
-
+    lis, err := net.Listen("tcp", fmt.Sprintf("%s:%d", cfg.BindIp, cfg.Port))
+    
     if err != nil {
         l.Fatal("Cannot start server: %s", err)
     }
@@ -34,7 +32,8 @@ func main() {
     )
 
     pb.RegisterPubSubServer(rpcServer, s)
-
+    
+    l.Info(fmt.Sprintf("Server is listening on: %s:%d", cfg.BindIp, cfg.Port))
     err = rpcServer.Serve(lis)
 
     if err != nil {

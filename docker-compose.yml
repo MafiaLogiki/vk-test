@@ -1,0 +1,16 @@
+services:
+
+  server:
+    image: subpub_server
+    container_name: subpub_server
+    build:
+      dockerfile: ./server/server.Dockerfile
+      context: .
+    env_file:
+      - ./server/.env
+    environment:
+      - IS_DEBUG=${IS_DEBUG-false}
+      - LISTENER_PORT=${LISTENER_PORT-8090}
+      - LISTENER_HOST=${LISTENER_HOST-0.0.0.0}
+    expose:
+      - "${LISTENER_PORT-8090}:${LISTENER_PORT-8090}"
