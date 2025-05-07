@@ -1,10 +1,10 @@
-package grpc2
+package server
 
 import (
 	"fmt"
-	rpc "vk-test/grpcServer"
-	"vk-test/subpub"
-    "vk-test/logger"
+	pb "vk-test/internal/pubsubpb"
+	"vk-test/internal/subpub"
+    "vk-test/pkg/logger"
 
 	context "context"
 
@@ -15,18 +15,18 @@ import (
 type Server struct {
     Subpub subpub.SubPub
     l logger.Logger
-    rpc.UnimplementedPubSubServer
+    pb.UnimplementedPubSubServer
 }
 
-func senderAsMsgHandler(PubSubSS rpc.PubSub_SubscribeServer) func(interface{}) {
+func senderAsMsgHandler(PubSubSS pb.PubSub_SubscribeServer) func(interface{}) {
     return func(msg interface{}) {
-        event := new(rpc.Event)
+        event := new(pb.Event)
         event.Data = msg.(string)
         PubSubSS.Send(event)
     }
 }
 
-func (s *Server) Subscribe(sr *rpc.SubscribeRequest, PubSubSS rpc.PubSub_SubscribeServer) error {
+func (s *Server) Subscribe(sr *pb.SubscribeRequest, PubSubSS pb.PubSub_SubscribeServer) error {
     sub, err := s.Subpub.Subscribe(sr.Key, senderAsMsgHandler(PubSubSS))
 
     if err != nil {
@@ -37,7 +37,7 @@ func (s *Server) Subscribe(sr *rpc.SubscribeRequest, PubSubSS rpc.PubSub_Subscri
     return nil
 }
 
-func (s *Server) Publish(ctx context.Context, pr *rpc.PublishRequest) (*emptypb.Empty, error) {
+func (s *Server) Publish(ctx context.Context, pr *pb.PublishRequest) (*emptypb.Empty, error) {
     var err error
     select {
     case <-ctx.Done():

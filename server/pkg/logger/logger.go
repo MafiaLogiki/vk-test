@@ -104,7 +104,7 @@ func (w *streamWrapper) SendMsg(m interface{}) error {
 
 func StreamLoggingInterceptor(l *logrus.Logger) grpc.StreamServerInterceptor {
     return func (srv interface{}, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
-        wrap := &streamWrapper{ ServerStream: stream, l: l}
+        wrap := newStreamWrapper(stream, l)
         
         start := time.Now()
         l.WithFields(logrus.Fields {
@@ -131,4 +131,11 @@ func NewLogger() *logrus.Logger {
 
     defer log.Info("Logger has been init")
     return log
+}
+
+func newStreamWrapper(stream grpc.ServerStream, l *logrus.Logger) *streamWrapper {
+    return &streamWrapper {
+        l: l,
+        ServerStream: stream,
+    }
 }

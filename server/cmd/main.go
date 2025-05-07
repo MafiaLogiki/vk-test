@@ -1,14 +1,14 @@
 package main
 
 import (
-    server "vk-test/grpcServer"
-    rpc "vk-test/grpc"
+    "vk-test/internal/server"
+    pb "vk-test/internal/pubsubpb"
 
     grpc "google.golang.org/grpc"
 
     "net"
     "log"
-    "vk-test/logger"
+    "vk-test/pkg/logger"
 )
 
 func main() {
@@ -20,14 +20,14 @@ func main() {
         l.Fatal("Cannot start server: %s", err)
     }
 
-    s := rpc.NewServer(l)
+    s := server.NewServer(l)
 
     rpcServer := grpc.NewServer(
         grpc.UnaryInterceptor(logger.LoggingInterceptor(l)),
         grpc.StreamInterceptor(logger.StreamLoggingInterceptor(l)),
     )
 
-    server.RegisterPubSubServer(rpcServer, s)
+    pb.RegisterPubSubServer(rpcServer, s)
 
     err = rpcServer.Serve(lis)
 

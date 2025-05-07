@@ -2,7 +2,6 @@ package subpub
 
 import (
 	"context"
-	_ "fmt"
 	"strings"
 	"sync"
 
