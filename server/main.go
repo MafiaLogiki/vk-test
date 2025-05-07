@@ -1,18 +1,18 @@
 package main
 
 import (
-	"vk-test/subpub"
-    "vk-test/server"
+    server "vk-test/grpcServer"
     rpc "vk-test/grpc"
 
     grpc "google.golang.org/grpc"
 
     "net"
     "log"
+    "vk-test/logger"
 )
 
 func main() {
-    subpub := subpub.NewSubPub()
+    logger.NewLogger()
 
     lis, err := net.Listen("tcp", ":8089")
 
@@ -20,12 +20,11 @@ func main() {
         log.Fatal("Cannot start server: %s", err)
     }
 
-    s := &rpc.Server{
-        Subpub: subpub,
-    }
+    s := rpc.NewServer()
 
     rpcServer := grpc.NewServer()
     server.RegisterPubSubServer(rpcServer, s)
+
     err = rpcServer.Serve(lis)
 
     if err != nil {

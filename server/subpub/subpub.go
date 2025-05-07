@@ -42,6 +42,15 @@ type subscr struct {
     cancelFunc context.CancelFunc
 }
 
+func IsSubValid(sub Subscription) bool {
+    select {
+    case <-sub.(*subscr).ctx.Done():
+        return false
+    default:
+        return true
+    }
+}
+
 func messageProcessing(sub *subscr, cb MessageHandler) {
    
     prevDone := make(chan struct{}, 1)

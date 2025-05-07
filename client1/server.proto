@@ -2,7 +2,7 @@ syntax = "proto3";
 
 import "google/protobuf/empty.proto";
 
-option go_package = "./;pubsub";
+option go_package = "./grpcClient;grpcClient";
 
 service PubSub {
     rpc Subscribe(SubscribeRequest) returns (stream Event);

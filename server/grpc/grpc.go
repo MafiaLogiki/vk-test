@@ -2,7 +2,7 @@ package grpc2
 
 import (
 	"fmt"
-	rpc "vk-test/server"
+	rpc "vk-test/grpcServer"
 	"vk-test/subpub"
 
 	context "context"
@@ -20,13 +20,20 @@ func senderAsMsgHandler(PubSubSS rpc.PubSub_SubscribeServer) func(interface{}) {
     return func(msg interface{}) {
         event := new(rpc.Event)
         event.Data = msg.(string)
+        fmt.Printf("New send: %s\n", event.Data)
         PubSubSS.Send(event)
     }
 }
 
 func (s *Server) Subscribe(sr *rpc.SubscribeRequest, PubSubSS rpc.PubSub_SubscribeServer) error {
-    _, err := s.Subpub.Subscribe(sr.Key, senderAsMsgHandler(PubSubSS))
-    return err
+    sub, err := s.Subpub.Subscribe(sr.Key, senderAsMsgHandler(PubSubSS))
+
+    if err != nil {
+        return err
+    }
+
+    for subpub.IsSubValid(sub) {}
+    return nil
 }
 
 func (s *Server) Publish(ctx context.Context, pr *rpc.PublishRequest) (*emptypb.Empty, error) {
@@ -38,5 +45,15 @@ func (s *Server) Publish(ctx context.Context, pr *rpc.PublishRequest) (*emptypb.
         err = s.Subpub.Publish(pr.GetKey(), pr.GetData())
     }
     
-    return &emptypb.Empty{}, status.Error(status.Code(err), fmt.Sprintf("%v", err))
+    if err != nil {    
+        return &emptypb.Empty{}, status.Error(status.Code(err), fmt.Sprintf("%v", err))
+    }
+
+    return &emptypb.Empty{}, nil 
+}
+
+func NewServer() *Server {
+    return &Server {
+        Subpub: subpub.NewSubPub(),
+    }
 }
