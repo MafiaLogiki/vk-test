@@ -24,6 +24,7 @@ func main() {
 
     rpcServer := grpc.NewServer(
         grpc.UnaryInterceptor(logger.LoggingInterceptor(l)),
+        grpc.StreamInterceptor(logger.StreamLoggingInterceptor(l)),
     )
 
     server.RegisterPubSubServer(rpcServer, s)

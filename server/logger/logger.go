@@ -13,6 +13,11 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+type streamWrapper struct {
+    l Logger
+    grpc.ServerStream
+}
+
 type Logger interface {
     Info(args ...interface{})
     Warn(args ...interface{})
@@ -25,7 +30,8 @@ type customTextFormatter struct {}
 
 func (f *customTextFormatter) Format(l *logrus.Entry) ([]byte, error){
     var buffer bytes.Buffer
-    switch l.Data["event"]{
+
+    switch l.Data["event"] {
     case "grpcRequestStart":
         buffer.WriteString(fmt.Sprintf("[%s] [%s] %s %s %v",
             strings.ToUpper(l.Level.String()),
@@ -45,12 +51,13 @@ func (f *customTextFormatter) Format(l *logrus.Entry) ([]byte, error){
            l.Data["response"],
         ))
     default:
-        buffer.WriteString(fmt.Sprintf("[%s] %s [%s] [%s:%d]",
+        buffer.WriteString(fmt.Sprintf("[%s] %s [%s] [%s:%d] %s",
             strings.ToUpper(l.Level.String()),
-            time.Now(),
+            time.Now().Format("2006.01.02 15:04:05"),
             l.Caller.File,
             l.Caller.Func.Name(),
             l.Caller.Line,
+            l.Message,
         ))
 
     }
@@ -86,6 +93,30 @@ func LoggingInterceptor(l *logrus.Logger) grpc.UnaryServerInterceptor {
         }).Info("Request has done")
 
         return resp, err
+    }
+}
+
+func (w *streamWrapper) SendMsg(m interface{}) error {
+    w.l.Info("Sending message:", m)
+    return w.ServerStream.SendMsg(m)
+}
+
+
+func StreamLoggingInterceptor(l *logrus.Logger) grpc.StreamServerInterceptor {
+    return func (srv interface{}, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+        wrap := &streamWrapper{ ServerStream: stream, l: l}
+        
+        start := time.Now()
+        l.WithFields(logrus.Fields {
+            "event":   "grpcRequestStart",
+            "method":  info.FullMethod,
+            "time":    start,
+            "request": srv,
+        }).Info("Stream started")
+
+        err := handler(srv, wrap)
+
+        return err
     }
 }
 
