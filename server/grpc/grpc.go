@@ -4,6 +4,7 @@ import (
 	"fmt"
 	rpc "vk-test/grpcServer"
 	"vk-test/subpub"
+    "vk-test/logger"
 
 	context "context"
 
@@ -13,6 +14,7 @@ import (
 )
 type Server struct {
     Subpub subpub.SubPub
+    l logger.Logger
     rpc.UnimplementedPubSubServer
 }
 
@@ -20,7 +22,6 @@ func senderAsMsgHandler(PubSubSS rpc.PubSub_SubscribeServer) func(interface{}) {
     return func(msg interface{}) {
         event := new(rpc.Event)
         event.Data = msg.(string)
-        fmt.Printf("New send: %s\n", event.Data)
         PubSubSS.Send(event)
     }
 }
@@ -52,8 +53,9 @@ func (s *Server) Publish(ctx context.Context, pr *rpc.PublishRequest) (*emptypb.
     return &emptypb.Empty{}, nil 
 }
 
-func NewServer() *Server {
+func NewServer(l logger.Logger) *Server {
     return &Server {
         Subpub: subpub.NewSubPub(),
+        l: l,
     }
 }

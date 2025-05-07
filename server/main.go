@@ -12,17 +12,20 @@ import (
 )
 
 func main() {
-    logger.NewLogger()
+    l := logger.NewLogger()
 
     lis, err := net.Listen("tcp", ":8089")
 
     if err != nil {
-        log.Fatal("Cannot start server: %s", err)
+        l.Fatal("Cannot start server: %s", err)
     }
 
-    s := rpc.NewServer()
+    s := rpc.NewServer(l)
 
-    rpcServer := grpc.NewServer()
+    rpcServer := grpc.NewServer(
+        grpc.UnaryInterceptor(logger.LoggingInterceptor(l)),
+    )
+
     server.RegisterPubSubServer(rpcServer, s)
 
     err = rpcServer.Serve(lis)
