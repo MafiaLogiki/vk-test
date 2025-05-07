@@ -1,6 +1,8 @@
 package main
 
 import (
+    "fmt"
+
     "vk-test/internal/server"
     pb "vk-test/internal/pubsubpb"
 
@@ -9,12 +11,16 @@ import (
     "net"
     "log"
     "vk-test/pkg/logger"
+    "vk-test/pkg/config"
 )
 
 func main() {
     l := logger.NewLogger()
+    cfg := config.GetConfig(l)
 
-    lis, err := net.Listen("tcp", ":8089")
+    l.Info(cfg.Port)
+
+    lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Port))
 
     if err != nil {
         l.Fatal("Cannot start server: %s", err)
