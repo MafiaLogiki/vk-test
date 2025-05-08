@@ -22,7 +22,6 @@ services:
       dockerfile: ./client1/client1.Dockerfile
       context: .
     environment:
-      - CLIENT1_IS_DEBUG=${CLIENT1_IS_DEBUG-false}
       - CLIENT1_LISTENER_PORT=${CLIENT1_LISTENER_PORT-8089}
       - CLIENT1_LISTENER_HOST=${CLIENT1_LISTENER_HOST-0.0.0.0}
       - SERVER_LISTENER_PORT=${SERVER_LISTENER_PORT-8090}

@@ -7,7 +7,6 @@ import (
 )
 
 type Config struct {
-    IsDebug    bool    `env:"CLIENT1_IS_DEBUG" env-default:"false"`
     BindIp     string  `env:"CLIENT1_LISTENER_HOST" env-default:"0.0.0.0"`
     Port       int     `env:"CLIENT1_LISTENER_PORT" env-default:"8090"`
     ServerIp   string  `env-default:"subpub_server"`
