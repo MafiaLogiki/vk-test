@@ -12,6 +12,8 @@ services:
       - SERVER_LISTENER_HOST=${SERVER_LISTENER_HOST-0.0.0.0}
     expose:
       - "${SERVER_LISTENER_PORT-8090}:${SERVER_LISTENER_PORT-8090}"
+    ports:
+      - "${SERVER_LISTENER_PORT-8090}:${SERVER_LISTENER_PORT-8090}"
   
   client1:
     image: client1
@@ -27,6 +29,8 @@ services:
       - SERVER_LISTENER_HOST=${SERVER_LISTENER_HOST-0.0.0.0}
 
     expose:
+      - "${CLIENT1_LISTENER_PORT-8089}:${CLIENT1_LISTENER_PORT-8089}"
+    ports:
       - "${CLIENT1_LISTENER_PORT-8089}:${CLIENT1_LISTENER_PORT-8089}"
     depends_on:
       server:
