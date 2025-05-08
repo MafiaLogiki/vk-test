@@ -4,7 +4,7 @@
 // 	protoc        v3.21.12
 // source: server.proto
 
-package grpcClient
+package clientpb
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"

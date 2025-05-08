@@ -1,7 +1,7 @@
 package main
 
 import (
-	"client/grpcClient"
+	"client/internal/pb"
 	"context"
 	"fmt"
 	"io"
@@ -19,15 +19,15 @@ func main() {
         log.Fatal("Error in dialing: %v", err)
     }
     
-    client := grpcClient.NewPubSubClient(conn)
+    client := clientpb.NewPubSubClient(conn)
     
-    var stream grpcClient.PubSub_SubscribeClient
+    var stream clientpb.PubSub_SubscribeClient
 
-    go func() { stream, err = client.Subscribe(context.Background(), &grpcClient.SubscribeRequest{Key: "test"}) }()
+    go func() { stream, err = client.Subscribe(context.Background(), &clientpb.SubscribeRequest{Key: "test"}) }()
 
     go func() {
         for {
-            client.Publish(context.Background(), &grpcClient.PublishRequest{Key: "test", Data: "test"})
+            client.Publish(context.Background(), &clientpb.PublishRequest{Key: "test", Data: "test"})
         }
     }()
 
