@@ -1,22 +1,27 @@
 package main
 
 import (
-    "fmt"
+	"fmt"
 
-    "vk-test/internal/server"
-    pb "vk-test/internal/pubsubpb"
+	pb "vk-test/internal/pubsubpb"
+	"vk-test/internal/server"
 
-    grpc "google.golang.org/grpc"
+	"github.com/sirupsen/logrus"
+	grpc "google.golang.org/grpc"
 
-    "net"
-    "log"
-    "vk-test/pkg/logger"
-    "vk-test/pkg/config"
+	"log"
+	"net"
+	"vk-test/pkg/config"
+	"vk-test/pkg/logger"
 )
 
 func main() {
     l := logger.NewLogger()
     cfg := config.GetConfig(l)
+
+    if cfg.IsDebug {
+        l.SetLevel(logrus.DebugLevel)
+    }
 
     lis, err := net.Listen("tcp", fmt.Sprintf("%s:%d", cfg.BindIp, cfg.Port))
     
