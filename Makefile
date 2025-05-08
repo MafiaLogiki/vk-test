@@ -15,3 +15,6 @@ down:
 
 config:
 	$(COMPOSE) config 
+
+tests:
+	cd server/ && go test -race ./internal/subpub
