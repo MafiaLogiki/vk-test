@@ -30,7 +30,7 @@ func (s *Server) Subscribe(sr *pb.SubscribeRequest, PubSubSS pb.PubSub_Subscribe
     sub, err := s.Subpub.Subscribe(sr.Key, senderAsMsgHandler(PubSubSS))
 
     if err != nil {
-        return err
+        return status.Error(codes.Internal, fmt.Sprintf("%v", err))
     }
 
     for subpub.IsSubValid(sub) {}
@@ -47,7 +47,7 @@ func (s *Server) Publish(ctx context.Context, pr *pb.PublishRequest) (*emptypb.E
     }
     
     if err != nil {    
-        return &emptypb.Empty{}, status.Error(status.Code(err), fmt.Sprintf("%v", err))
+        return &emptypb.Empty{}, status.Error(codes.Internal, fmt.Sprintf("%v", err))
     }
 
     return &emptypb.Empty{}, nil 
