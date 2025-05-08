@@ -2,6 +2,7 @@ package main
 
 import (
 	"client/internal/pb"
+    "client/internal/config"
 	"context"
 	"fmt"
 	"io"
@@ -14,7 +15,8 @@ import (
 
 
 func main() {
-    conn, err := grpc.NewClient("localhost:8089", grpc.WithTransportCredentials(insecure.NewCredentials()))
+    cfg := config.GetConfig()
+    conn, err := grpc.NewClient(fmt.Sprintf("%s:%d", cfg.ServerIp, cfg.ServerPort), grpc.WithTransportCredentials(insecure.NewCredentials()))
     if err != nil {
         log.Fatal("Error in dialing: %v", err)
     }
@@ -33,7 +35,10 @@ func main() {
 
     
     time.Sleep(time.Second)
-    
+    if err != nil {
+        fmt.Println(err)
+        return
+    }
     for {
         event, err := stream.Recv()
 

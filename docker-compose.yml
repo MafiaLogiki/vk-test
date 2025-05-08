@@ -6,11 +6,28 @@ services:
     build:
       dockerfile: ./server/server.Dockerfile
       context: .
-    env_file:
-      - ./server/.env
     environment:
-      - IS_DEBUG=${IS_DEBUG-false}
-      - LISTENER_PORT=${LISTENER_PORT-8090}
-      - LISTENER_HOST=${LISTENER_HOST-0.0.0.0}
+      - SERVER_IS_DEBUG=${SERVER_IS_DEBUG-false}
+      - SERVER_LISTENER_PORT=${SERVER_LISTENER_PORT-8090}
+      - SERVER_LISTENER_HOST=${SERVER_LISTENER_HOST-0.0.0.0}
     expose:
-      - "${LISTENER_PORT-8090}:${LISTENER_PORT-8090}"
+      - "${SERVER_LISTENER_PORT-8090}:${SERVER_LISTENER_PORT-8090}"
+  
+  client1:
+    image: client1
+    container_name: client1
+    build:
+      dockerfile: ./client1/client1.Dockerfile
+      context: .
+    environment:
+      - CLIENT1_IS_DEBUG=${CLIENT1_IS_DEBUG-false}
+      - CLIENT1_LISTENER_PORT=${CLIENT1_LISTENER_PORT-8089}
+      - CLIENT1_LISTENER_HOST=${CLIENT1_LISTENER_HOST-0.0.0.0}
+      - SERVER_LISTENER_PORT=${SERVER_LISTENER_PORT-8090}
+      - SERVER_LISTENER_HOST=${SERVER_LISTENER_HOST-0.0.0.0}
+
+    expose:
+      - "${CLIENT1_LISTENER_PORT-8089}:${CLIENT1_LISTENER_PORT-8089}"
+    depends_on:
+      server:
+        condition: service_started

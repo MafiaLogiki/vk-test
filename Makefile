@@ -1,6 +1,17 @@
-SERVER_ENV_FILE_PATH=./server/.env
+COMPOSE=docker-compose
 
-.PHONY: server
+.PHONY: server client1
+
+all: server client1
 
 server: docker-compose.yml
-	docker-compose --env-file $(SERVER_ENV_FILE_PATH) up --build
+	$(COMPOSE) up --build -d server
+
+client1: docker-compose.yml
+	$(COMPOSE) up --build -d client1 
+
+down:
+	$(COMPOSE) down
+
+config:
+	$(COMPOSE) config 

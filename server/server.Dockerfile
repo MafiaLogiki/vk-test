@@ -11,6 +11,5 @@ RUN --mount=type=cache,target="/root/.cache/go-build" CGO_ENABLED=0 GOOS=linux g
 
 FROM scratch
 COPY --from=builder /app/server /server
-COPY --from=builder /app/.env /.env
 
 CMD ["/server"]
